@@ -1,7 +1,11 @@
 import logging
+import json
 
+from crum import get_current_request
 from django.urls import reverse
 from django.utils.translation import gettext as _
+
+from lms.djangoapps.course_home_api.utils import is_request_from_learning_mfe
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +89,10 @@ class PersonalizedLearnerScheduleCallToAction:
     @staticmethod
     def _make_reset_deadlines_cta(xblock):
         from lms.urls import RESET_COURSE_DEADLINES_NAME
-        return {
+        request = get_current_request()
+        is_learning_mfe = request and is_request_from_learning_mfe(request)
+
+        cta_data = {
             'link': reverse(RESET_COURSE_DEADLINES_NAME),
             'link_name': _('Shift due dates'),
             'form_values': {
@@ -94,4 +101,14 @@ class PersonalizedLearnerScheduleCallToAction:
             'description': _('To participate in this assignment, the suggested schedule for your course needs '
                              'updating. Don’t worry, we’ll shift all the due dates for you and you won’t lose '
                              'any of your progress.'),
+
         }
+
+        if is_learning_mfe:
+            cta_data['event_data'] = {
+                'body': _('View all dates'),
+                'header': _('Your due dates have been successfully shifted to help you stay on track.'),
+                'course_id': str(xblock.scope_ids.usage_id.context_key),
+            }
+
+        return cta_data
